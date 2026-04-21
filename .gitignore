@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Dify plugin packages
+dist/
+*.difypkg
+*.signed.difypkg
+
+# Local signing material
+signing_keys/*.private.pem
+
+# Local/editor/runtime files
+.DS_Store
+.env
+.env.*
+!.env.example
+anaconda_projects/
+docling_service/

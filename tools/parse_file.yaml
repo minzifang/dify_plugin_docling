@@ -1,0 +1,268 @@
+identity:
+  author: "leeleo"
+  name: "parse_file"
+  label:
+    en_US: "Parse File"
+    zh_Hans: "解析文件"
+description:
+  human:
+    en_US: "Parse an uploaded file with a standalone Docling Serve API and return structured content."
+    zh_Hans: "调用独立部署的 Docling Serve API 解析上传文件，并返回结构化内容。"
+  llm: "Parse a file with Docling Serve. Use this for PDFs, Word, PowerPoint, Excel, HTML, Markdown, images, and similar document files. Advanced options are forwarded to Docling Serve and must be supported by the configured service."
+parameters:
+  - name: file
+    type: file
+    required: true
+    label:
+      en_US: "File"
+      zh_Hans: "文件"
+    human_description:
+      en_US: "A Dify file variable from a start node, upload node, or upstream workflow step."
+      zh_Hans: "来自开始节点、上传节点或上游节点的 Dify 文件变量。"
+    llm_description: "The file object that should be parsed by Docling."
+    form: llm
+  - name: output_format
+    type: select
+    required: false
+    default: markdown
+    label:
+      en_US: "Output Format"
+      zh_Hans: "输出格式"
+    human_description:
+      en_US: "Choose the main content format returned in `content`. Markdown is usually best for LLM summarization and extraction."
+      zh_Hans: "选择 `content` 字段的主要内容格式。给大模型总结、抽取时通常建议使用 Markdown。"
+    llm_description: "The output format for the returned content. Valid values are markdown, text, html, json, or doctags."
+    form: form
+    options:
+      - value: markdown
+        label:
+          en_US: "Markdown"
+          zh_Hans: "Markdown"
+      - value: text
+        label:
+          en_US: "Plain Text"
+          zh_Hans: "纯文本"
+      - value: html
+        label:
+          en_US: "HTML"
+          zh_Hans: "HTML"
+      - value: json
+        label:
+          en_US: "JSON"
+          zh_Hans: "JSON"
+      - value: doctags
+        label:
+          en_US: "DocTags"
+          zh_Hans: "DocTags"
+  - name: max_file_size_mb
+    type: number
+    required: false
+    default: 100
+    label:
+      en_US: "Max File Size (MB)"
+      zh_Hans: "最大文件大小 (MB)"
+    human_description:
+      en_US: "Reject files larger than this limit before sending them to Docling Serve. This is a plugin-side safety limit."
+      zh_Hans: "在发送到 Docling Serve 前拒绝超过该大小的文件。这是插件侧的安全限制。"
+    llm_description: "Maximum allowed file size in megabytes."
+    form: form
+  - name: do_ocr
+    type: boolean
+    required: false
+    default: true
+    label:
+      en_US: "OCR"
+      zh_Hans: "启用 OCR"
+    human_description:
+      en_US: "Ask Docling Serve to run OCR for scanned PDFs and images. This can be slower and depends on the OCR engines/models installed on the Docling service."
+      zh_Hans: "请求 Docling Serve 对扫描 PDF 和图片执行 OCR。该功能可能较慢，并依赖 Docling 服务端已安装的 OCR 引擎或模型。"
+    llm_description: "Whether Docling Serve should run OCR. This only works when the configured service supports OCR."
+    form: form
+  - name: force_ocr
+    type: boolean
+    required: false
+    default: false
+    label:
+      en_US: "Force OCR"
+      zh_Hans: "强制 OCR"
+    human_description:
+      en_US: "Force OCR even when the document already contains selectable text. Useful for bad embedded text layers, but slower and may reduce accuracy on normal PDFs."
+      zh_Hans: "即使文档已有可选中文本也强制 OCR。适合文本层质量很差的 PDF，但更慢，普通 PDF 上可能降低准确率。"
+    llm_description: "Whether Docling Serve should force OCR over existing text. Use only when the existing text layer is poor."
+    form: form
+  - name: ocr_lang
+    type: string
+    required: false
+    label:
+      en_US: "OCR Languages"
+      zh_Hans: "OCR 语言"
+    human_description:
+      en_US: "Comma-separated OCR language hints, for example en,zh. Supported values depend on the OCR backend installed in Docling Serve."
+      zh_Hans: "OCR 语言提示，多个用英文逗号分隔，例如 en,zh。可用值取决于 Docling Serve 中安装的 OCR 后端。"
+    llm_description: "Comma-separated OCR language hints. Supported values depend on the configured Docling service."
+    form: form
+  - name: do_table_structure
+    type: boolean
+    required: false
+    default: true
+    label:
+      en_US: "Table Structure"
+      zh_Hans: "表格结构"
+    human_description:
+      en_US: "Ask Docling to detect table cells, rows, and columns. Turn this off for faster parsing when table fidelity is not important."
+      zh_Hans: "请求 Docling 识别表格单元格、行和列。如果不关心表格结构，可关闭以提升速度。"
+    llm_description: "Whether Docling Serve should extract table structure."
+    form: form
+  - name: table_mode
+    type: select
+    required: false
+    default: accurate
+    label:
+      en_US: "Table Mode"
+      zh_Hans: "表格模式"
+    human_description:
+      en_US: "Choose table extraction quality. Accurate is slower but better for complex tables; Fast is quicker but may lose structure."
+      zh_Hans: "选择表格识别质量。准确模式更慢但更适合复杂表格；快速模式速度更快但可能丢失结构。"
+    llm_description: "Table mode. Valid values are accurate or fast."
+    form: form
+    options:
+      - value: accurate
+        label:
+          en_US: "Accurate"
+          zh_Hans: "准确"
+      - value: fast
+        label:
+          en_US: "Fast"
+          zh_Hans: "快速"
+  - name: pdf_backend
+    type: select
+    required: false
+    default: docling_parse
+    label:
+      en_US: "PDF Backend"
+      zh_Hans: "PDF 后端"
+    human_description:
+      en_US: "PDF parsing backend requested from Docling Serve. Availability can vary by Docling Serve version and container image."
+      zh_Hans: "请求 Docling Serve 使用的 PDF 解析后端。可用选项可能随 Docling Serve 版本和镜像而变化。"
+    llm_description: "PDF backend for Docling Serve. The selected backend must be supported by the configured service."
+    form: form
+    options:
+      - value: docling_parse
+        label:
+          en_US: "docling_parse"
+          zh_Hans: "docling_parse"
+      - value: pypdfium2
+        label:
+          en_US: "pypdfium2"
+          zh_Hans: "pypdfium2"
+      - value: dlparse_v4
+        label:
+          en_US: "dlparse_v4"
+          zh_Hans: "dlparse_v4"
+  - name: image_export_mode
+    type: select
+    required: false
+    default: embedded
+    label:
+      en_US: "Image Export"
+      zh_Hans: "图片导出"
+    human_description:
+      en_US: "How extracted images are represented in Markdown, HTML, and JSON outputs. Embedded can produce very large results; placeholder is lighter."
+      zh_Hans: "控制图片在 Markdown、HTML、JSON 输出中的表示方式。内嵌会让结果很大；占位符更轻量。"
+    llm_description: "Image export mode. Valid values are embedded, placeholder, referenced."
+    form: form
+    options:
+      - value: embedded
+        label:
+          en_US: "Embedded"
+          zh_Hans: "内嵌"
+      - value: placeholder
+        label:
+          en_US: "Placeholder"
+          zh_Hans: "占位符"
+      - value: referenced
+        label:
+          en_US: "Referenced"
+          zh_Hans: "引用"
+  - name: include_images
+    type: boolean
+    required: false
+    default: true
+    label:
+      en_US: "Include Images"
+      zh_Hans: "包含图片"
+    human_description:
+      en_US: "Ask Docling to include images in the converted document when the selected output format can carry them."
+      zh_Hans: "当所选输出格式支持图片时，请求 Docling 在转换结果中包含图片。"
+    llm_description: "Whether Docling Serve should include images."
+    form: form
+  - name: pipeline
+    type: select
+    required: false
+    default: standard
+    label:
+      en_US: "Pipeline"
+      zh_Hans: "处理管线"
+    human_description:
+      en_US: "Processing pipeline requested from Docling Serve. Use Standard for normal CPU deployments. VLM requires a Docling Serve setup with the required vision-language model support."
+      zh_Hans: "请求 Docling Serve 使用的处理管线。普通 CPU 部署建议使用标准模式；VLM 需要服务端已配置视觉语言模型能力。"
+    llm_description: "Processing pipeline. Use standard unless the configured Docling service supports VLM."
+    form: form
+    options:
+      - value: standard
+        label:
+          en_US: "Standard"
+          zh_Hans: "标准"
+      - value: vlm
+        label:
+          en_US: "VLM"
+          zh_Hans: "VLM"
+  - name: page_range
+    type: string
+    required: false
+    label:
+      en_US: "Page Range"
+      zh_Hans: "页码范围"
+    human_description:
+      en_US: "Optional inclusive page range, for example 1,3 or 1-3. Leave empty to parse the whole document."
+      zh_Hans: "可选的闭区间页码范围，例如 1,3 或 1-3。留空表示解析整个文档。"
+    llm_description: "Optional page range, for example 1,3 or 1-3."
+    form: form
+  - name: document_timeout
+    type: number
+    required: false
+    label:
+      en_US: "Document Timeout"
+      zh_Hans: "单文档超时"
+    human_description:
+      en_US: "Docling Serve per-document timeout in seconds. Increase this for large PDFs, scanned files, OCR, or VLM pipelines."
+      zh_Hans: "Docling Serve 单文档超时时间，单位秒。大 PDF、扫描件、OCR 或 VLM 管线可适当调大。"
+    llm_description: "Docling Serve timeout for each document in seconds."
+    form: form
+output_schema:
+  type: object
+  properties:
+    content:
+      type: string
+      description: "Converted document content in the selected output format."
+    output_format:
+      type: string
+      description: "The selected output format."
+    filename:
+      type: string
+      description: "Original or inferred filename."
+    mime_type:
+      type: string
+      description: "Original or inferred MIME type."
+    size:
+      type: integer
+      description: "Input file size in bytes."
+    status:
+      type: string
+      description: "Status returned by Docling Serve."
+    processing_time:
+      type: number
+      description: "Processing time returned by Docling Serve."
+extra:
+  python:
+    source: tools/parse_file.py

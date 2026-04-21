@@ -1,0 +1,29 @@
+version: 0.1.0
+type: plugin
+author: "leeleo"
+name: "docling"
+label:
+  en_US: "Docling"
+  zh_Hans: "Docling 文档解析"
+description:
+  en_US: "Parse PDF, Office, HTML, Markdown, images, and other files with Docling."
+  zh_Hans: "在 Dify 中调用 Docling 解析 PDF、Office、HTML、Markdown、图片等文件。"
+icon: icon.svg
+created_at: "2026-04-21T00:00:00.000000000Z"
+resource:
+  memory: 2147483648
+  permission:
+    tool:
+      enabled: true
+plugins:
+  tools:
+    - provider/docling.yaml
+meta:
+  version: 0.1.0
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main

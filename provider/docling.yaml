@@ -1,0 +1,43 @@
+identity:
+  author: "leeleo"
+  name: "docling"
+  label:
+    en_US: "Docling"
+    zh_Hans: "Docling 文档解析"
+  description:
+    en_US: "Parse documents through a standalone Docling Serve API."
+    zh_Hans: "通过独立部署的 Docling Serve API 解析文档。"
+  icon: icon.svg
+  tags:
+    - productivity
+    - utilities
+credentials_for_provider:
+  docling_api_url:
+    type: text-input
+    required: true
+    label:
+      en_US: "Docling API URL"
+      zh_Hans: "Docling API 地址"
+    placeholder:
+      en_US: "http://192.168.1.20:5001, http://docling-serve:5001, or https://docling.example.com"
+      zh_Hans: "http://192.168.1.20:5001、http://docling-serve:5001 或 https://docling.example.com"
+    help:
+      en_US: "Any Docling Serve base URL reachable from Dify plugin-daemon. LAN IPs, internal DNS names, Docker service names, and HTTPS domains are all supported. Avoid localhost unless Docling runs in the same container."
+      zh_Hans: "填写 Dify plugin-daemon 能访问到的任意 Docling Serve 基础地址。支持局域网 IP、内网 DNS、Docker 服务名和 HTTPS 域名。除非 Docling 与插件在同一容器内，否则不要填 localhost。"
+  docling_api_key:
+    type: secret-input
+    required: false
+    label:
+      en_US: "API Key"
+      zh_Hans: "API Key"
+    placeholder:
+      en_US: "Optional"
+      zh_Hans: "可选"
+    help:
+      en_US: "Optional X-Api-Key token. Leave empty if your Docling Serve instance does not enforce an API key."
+      zh_Hans: "可选的 X-Api-Key。若你的 Docling Serve 没有启用 API Key，可留空。"
+tools:
+  - tools/parse_file.yaml
+extra:
+  python:
+    source: provider/docling.py
