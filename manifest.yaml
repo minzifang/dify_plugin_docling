@@ -1,4 +1,4 @@
-version: 0.1.0
+version: 0.1.2
 type: plugin
 author: "leeleo"
 name: "docling"
@@ -19,7 +19,7 @@ plugins:
   tools:
     - provider/docling.yaml
 meta:
-  version: 0.1.0
+  version: 0.1.2
   arch:
     - amd64
     - arm64

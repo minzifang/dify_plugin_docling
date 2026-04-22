@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 This project follows a practical versioning scheme based on Dify plugin releases. Public release packages should be attached to GitHub Releases instead of committed to the repository.
 
+## [0.1.2] - 2026-04-22
+
+### Fixed
+
+- Added an explicit `content` variable message and a generic text message on successful parsing so downstream Dify nodes can reliably consume the parsed document content.
+
+## [0.1.1] - 2026-04-22
+
+### Changed
+
+- Added configurable conversion endpoint path for Docling-compatible gateways that do not expose `/v1/convert/file`.
+- Improved HTTP error messages returned by the Docling API, especially `504 Gateway Timeout`, `502 Bad Gateway`, and `503 Service Unavailable`.
+- Documented how to troubleshoot `/v1/convert/file` gateway timeouts in English and Simplified Chinese.
+
 ## [0.1.0] - 2026-04-21
 
 ### Added

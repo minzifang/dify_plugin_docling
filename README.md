@@ -68,12 +68,20 @@ Only one of these endpoints needs to respond successfully. Document conversion s
 POST /v1/convert/file
 ```
 
+If your gateway exposes the conversion endpoint at a different path, set `Convert Endpoint Path` in provider credentials. For example, when the full conversion URL is `http://192.168.4.211:5009/`, use:
+
+```text
+Docling API URL: http://192.168.4.211:5009
+Convert Endpoint Path: /
+```
+
 ## Provider Credentials
 
 | Field | Required | Description |
 | --- | --- | --- |
 | `Docling API URL` | Yes | Base URL for your Docling Serve-compatible API. |
 | `API Key` | No | Optional value sent as `X-Api-Key`. Leave empty if your service does not require it. |
+| `Convert Endpoint Path` | No | File conversion path appended to `Docling API URL`. Defaults to `/v1/convert/file`. Use `/` if your proxy exposes conversion at the root URL. |
 
 ## Tool: Parse File
 
@@ -148,13 +156,13 @@ Build a package into `dist/` from the parent directory:
 
 ```bash
 mkdir -p dify_plugin_docling/dist
-dify plugin package dify_plugin_docling --output_path dify_plugin_docling/dist/docling-0.1.0.difypkg
+dify plugin package dify_plugin_docling --output_path dify_plugin_docling/dist/docling-0.1.2.difypkg
 ```
 
 If plugin verification is enabled, sign the package:
 
 ```bash
-dify signature sign dist/docling-0.1.0.difypkg \
+dify signature sign dist/docling-0.1.2.difypkg \
   -p signing_keys/docling_plugin.private.pem \
   -c community
 ```
@@ -179,6 +187,20 @@ Dify may provide root-relative file URLs. The plugin resolves them using:
 4. fallback `http://api:5001`
 
 If your self-hosted Dify deployment uses custom service names or networks, configure one of the environment variables above for the plugin runtime.
+
+### 504 Gateway Timeout From `/v1/convert/file`
+
+This means the plugin reached the configured Docling API, but a gateway, reverse proxy, load balancer, or Docling service wrapper timed out while waiting for parsing to finish.
+
+Common fixes:
+
+- Increase timeout settings in the gateway in front of Docling Serve.
+- Check Docling Serve logs and resource usage.
+- Give Docling Serve more CPU, memory, or GPU resources.
+- Reduce parsing cost by setting `page_range`, disabling OCR when not needed, using `table_mode=fast`, or avoiding `pipeline=vlm` unless the service is configured for it.
+- Increase `document_timeout` if your Docling Serve deployment supports longer document processing.
+
+If the same file also times out when calling Docling Serve directly with `curl`, the issue is in the Docling service path rather than Dify.
 
 ## Project Status
 

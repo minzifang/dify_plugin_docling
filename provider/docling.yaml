@@ -36,6 +36,18 @@ credentials_for_provider:
     help:
       en_US: "Optional X-Api-Key token. Leave empty if your Docling Serve instance does not enforce an API key."
       zh_Hans: "可选的 X-Api-Key。若你的 Docling Serve 没有启用 API Key，可留空。"
+  docling_convert_path:
+    type: text-input
+    required: false
+    label:
+      en_US: "Convert Endpoint Path"
+      zh_Hans: "解析接口路径"
+    placeholder:
+      en_US: "/v1/convert/file or /"
+      zh_Hans: "/v1/convert/file 或 /"
+    help:
+      en_US: "Path appended to Docling API URL for file conversion. Official Docling Serve uses /v1/convert/file. If your proxy exposes conversion at the root URL, use /."
+      zh_Hans: "文件解析请求会拼接到 Docling API 地址后的路径。官方 Docling Serve 使用 /v1/convert/file；如果你的代理把解析接口暴露在根路径，请填 /。"
 tools:
   - tools/parse_file.yaml
 extra:

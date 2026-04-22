@@ -22,6 +22,7 @@ class ParseFileTool(Tool):
         max_file_size_mb = float(tool_parameters.get("max_file_size_mb") or 100)
         base_url = str(self.runtime.credentials.get("docling_api_url") or "").strip().rstrip("/")
         api_key = str(self.runtime.credentials.get("docling_api_key") or "").strip()
+        convert_path = str(self.runtime.credentials.get("docling_convert_path") or "/v1/convert/file").strip()
 
         if not file_obj:
             yield self.create_text_message("Error: missing required parameter `file`.")
@@ -54,6 +55,7 @@ class ParseFileTool(Tool):
                     output_format=output_format,
                     max_file_size_mb=max_file_size_mb,
                     tool_parameters=tool_parameters,
+                    convert_path=convert_path,
                 )
                 text = str(service_payload.get("text") or "")
 
@@ -69,6 +71,8 @@ class ParseFileTool(Tool):
                 }
 
                 yield self.create_json_message(payload)
+                yield self.create_variable_message("content", text)
+                yield self.create_text_message(text)
         except Exception as exc:
             yield self.create_text_message(f"Docling parse failed: {exc}")
 
@@ -80,6 +84,7 @@ class ParseFileTool(Tool):
         output_format: str,
         max_file_size_mb: float,
         tool_parameters: dict[str, Any],
+        convert_path: str,
     ) -> dict[str, Any]:
         headers = {}
         if api_key:
@@ -91,23 +96,67 @@ class ParseFileTool(Tool):
             max_file_size_mb=max_file_size_mb,
             tool_parameters=tool_parameters,
         )
+        convert_url = self._join_api_url(base_url, convert_path)
 
         with source_path.open("rb") as file_handle:
             response = requests.post(
-                f"{base_url}/v1/convert/file",
+                convert_url,
                 headers=headers,
                 files=[("files", (source_path.name, file_handle, "application/octet-stream"))],
                 data=data,
                 timeout=600,
             )
 
-        response.raise_for_status()
+        self._raise_for_bad_response(response, convert_url)
         payload = response.json()
         if not isinstance(payload, dict):
             raise ValueError("Docling API returned a non-object JSON response")
         text = self._extract_docling_text(payload, output_format)
         payload["text"] = text
         return payload
+
+    def _join_api_url(self, base_url: str, path: str) -> str:
+        if path.startswith(("http://", "https://")):
+            return path
+        if not path:
+            path = "/v1/convert/file"
+        if not path.startswith("/"):
+            path = "/" + path
+        return urljoin(base_url.rstrip("/") + "/", path.lstrip("/"))
+
+    def _raise_for_bad_response(self, response: requests.Response, convert_url: str) -> None:
+        if response.status_code < 400:
+            return
+
+        body = response.text.strip()
+        if len(body) > 500:
+            body = body[:500] + "..."
+
+        if response.status_code == 504:
+            raise ValueError(
+                "Docling API returned 504 Gateway Timeout. "
+                "The plugin reached the configured service, but the gateway or reverse proxy "
+                "timed out while waiting for Docling to finish parsing. "
+                "Increase timeout settings on the Docling Serve gateway/proxy, allocate more "
+                "CPU/GPU/memory to Docling, or reduce parsing cost by limiting `page_range`, "
+                "disabling OCR when it is not needed, using `table_mode=fast`, or increasing "
+                "`document_timeout` if the service supports it. "
+                f"url={convert_url}"
+            )
+
+        if response.status_code in {502, 503}:
+            raise ValueError(
+                f"Docling API returned HTTP {response.status_code}. "
+                "The configured URL is reachable, but the upstream Docling service may be "
+                "unavailable, overloaded, restarting, or rejected by its gateway. "
+                f"url={convert_url}"
+                + (f", response={body}" if body else "")
+            )
+
+        raise ValueError(
+            f"Docling API returned HTTP {response.status_code} for {convert_url}"
+            + (f": {body}" if body else "")
+        )
 
     def _build_docling_form_data(
         self,
@@ -212,7 +261,7 @@ class ParseFileTool(Tool):
             inferred_name = filename or self._filename_from_url(str(url)) or "document"
             safe_name = self._safe_filename(inferred_name)
             target_path = temp_dir / safe_name
-            request = Request(str(url), headers={"User-Agent": "dify-docling-plugin/0.1.0"})
+            request = Request(str(url), headers={"User-Agent": "dify-docling-plugin/0.1.2"})
             with urlopen(request, timeout=120) as response:
                 data = response.read(max_file_size_bytes + 1)
                 response_mime = response.headers.get_content_type()
