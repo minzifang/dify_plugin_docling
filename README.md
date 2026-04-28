@@ -11,7 +11,8 @@ This project is a Dify plugin only. It does not install, bundle, or operate Docl
 - Works with Dify file variables in Workflow, Chatflow, and Agent apps.
 - Calls a standalone Docling Serve-compatible HTTP API.
 - Supports Markdown, plain text, HTML, JSON, and DocTags outputs.
-- Returns a stable `content` variable for downstream LLM nodes.
+- Returns converted content through Dify's standard `text` output.
+- Supports auto, sync, and manual async execution modes; the default uses the stable synchronous path to avoid long-running workflows.
 - Forwards common Docling Serve options such as OCR, table extraction, PDF backend, image export mode, page range, and document timeout.
 - Keeps document parsing infrastructure outside Dify, so Docling can be deployed, scaled, secured, and tuned independently.
 
@@ -24,7 +25,7 @@ Dify file variable
   -> Parsed content returned to Dify
 ```
 
-The plugin downloads the Dify file variable inside the plugin runtime, sends it to Docling Serve through `POST /v1/convert/file`, and returns structured JSON to Dify.
+The plugin downloads the Dify file variable inside the plugin runtime, sends it to your configured Docling conversion URL, and returns structured JSON to Dify.
 
 ## Requirements
 
@@ -46,6 +47,9 @@ Common examples:
 | Scenario | Example URL |
 | --- | --- |
 | Docling Serve on the same Docker network as Dify | `http://docling-serve:5001` |
+| Docling Serve base URL | `http://docling-serve:5001` |
+| Full Source JSON conversion URL | `http://docling-serve:5001/v1/convert/source` |
+| Full multipart conversion URL | `http://docling-serve:5001/v1/convert/file` |
 | Docling Serve on the Docker host from a container | `http://host.docker.internal:5001` |
 | Docling Serve on another LAN machine | `http://192.168.1.20:5001` |
 | Docling Serve behind internal DNS | `http://docling.internal:5001` |
@@ -62,26 +66,29 @@ GET /openapi.json
 GET /
 ```
 
-Only one of these endpoints needs to respond successfully. Document conversion still uses:
+Only one of these endpoints needs to respond successfully.
+
+For conversion, `Docling API URL` can be either a base URL or a full conversion URL. If you enter a base URL, the plugin uses the official Docling Serve conversion path automatically:
 
 ```text
-POST /v1/convert/file
+http://docling-serve:5001
+-> http://docling-serve:5001/v1/convert/file
 ```
 
-If your gateway exposes the conversion endpoint at a different path, set `Convert Endpoint Path` in provider credentials. For example, when the full conversion URL is `http://192.168.4.211:5009/`, use:
+If your gateway exposes conversion at another path, either enter the full official-compatible conversion URL or use the advanced `Conversion Path` credential. For example, when the service URL itself is the conversion endpoint, set:
 
 ```text
 Docling API URL: http://192.168.4.211:5009
-Convert Endpoint Path: /
+Conversion Path: /
 ```
 
 ## Provider Credentials
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `Docling API URL` | Yes | Base URL for your Docling Serve-compatible API. |
+| `Docling API URL` | Yes | Docling Serve base URL or full file conversion URL. |
 | `API Key` | No | Optional value sent as `X-Api-Key`. Leave empty if your service does not require it. |
-| `Convert Endpoint Path` | No | File conversion path appended to `Docling API URL`. Defaults to `/v1/convert/file`. Use `/` if your proxy exposes conversion at the root URL. |
+| `Conversion Path` | No | Advanced override for custom gateways. Leave empty for official Docling Serve. Use `/` when the configured API URL itself is the conversion endpoint. |
 
 ## Tool: Parse File
 
@@ -90,19 +97,28 @@ Convert Endpoint Path: /
 | Option | Default | Description |
 | --- | --- | --- |
 | `file` | required | Dify file variable to parse. |
-| `output_format` | `markdown` | Main content format returned in `content`. Markdown is recommended for LLM prompts. |
+| `output_format` | `markdown` | Main content format returned in the Dify `text` output. Markdown is recommended for LLM prompts. |
+| `execution_mode` | `auto` | Execution mode. `auto` uses sync for normal files and async for PDFs larger than 2 MB. `sync` calls the synchronous endpoint directly. `async` submits a task and polls for the result. |
 | `max_file_size_mb` | `100` | Plugin-side file size limit before uploading to Docling Serve. |
-| `do_ocr` | `true` | Ask Docling Serve to run OCR for scanned PDFs and images. Requires OCR support on the service. |
+| `do_ocr` | `false` | Ask Docling Serve to run OCR for scanned PDFs and images. Enable only when needed because OCR can be slow on large files. |
+| `send_advanced_options` | `false` | Send OCR/table/image/PDF backend/pipeline options. Leave off to mimic Docling Serve UI/service defaults. |
+| `request_transport` | `auto` | Request transport. Auto uses Source JSON for PDFs up to 20 MB and multipart for larger PDFs to avoid base64 expansion. Most non-PDF files use multipart. |
 | `force_ocr` | `false` | Force OCR even when a text layer already exists. Useful for poor embedded text, but slower. |
 | `ocr_lang` | empty | Comma-separated OCR language hints such as `en,zh`. Supported values depend on your OCR backend. |
 | `do_table_structure` | `true` | Ask Docling to extract table cells, rows, and columns. |
 | `table_mode` | `accurate` | `accurate` favors quality; `fast` favors speed. |
-| `pdf_backend` | `docling_parse` | Requested PDF backend. Availability depends on Docling Serve. |
-| `image_export_mode` | `embedded` | How images are represented in Markdown, HTML, and JSON outputs. |
-| `include_images` | `true` | Ask Docling to include images when the selected output format supports them. |
+| `pdf_backend` | `auto` | Requested PDF backend. `auto` omits the field and lets Docling Serve choose its default. |
+| `image_export_mode` | `placeholder` | How images are represented in Markdown, HTML, and JSON outputs. |
+| `include_images` | `false` | Ask Docling to include images when the selected output format supports them. Leave off for LLM workflows and large files. |
 | `pipeline` | `standard` | Use `standard` for normal deployments. `vlm` requires service-side VLM support. |
 | `page_range` | empty | Optional inclusive page range, for example `1,3` or `1-3`. |
 | `document_timeout` | auto | Per-document timeout in seconds. Increase for large or OCR-heavy files. |
+| `request_timeout` | `600` | HTTP timeout in seconds for sync conversion or async task submission. Large files may need several minutes; align this with your Dify/plugin-daemon and Docling gateway timeouts. |
+| `async_timeout` | `7200` | Total async polling budget in seconds. Complex PDFs can take many minutes. Only used when the actual execution mode is `async`. |
+| `file_download_timeout` | `120` | Timeout in seconds for downloading the Dify file into the plugin runtime. |
+| `poll_interval` | `5` | Seconds between async status checks. |
+| `max_output_chars` | `200000` | Maximum characters returned in the Dify `text` output. Use `0` for no truncation. |
+| `include_raw_response` | `false` | Include raw Docling API response in JSON for debugging. This can be very large. |
 
 ### Output
 
@@ -110,16 +126,21 @@ The tool returns JSON:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `content` | string | Converted document content in the selected output format. |
 | `output_format` | string | Selected output format. |
+| `execution_mode` | string | Actual execution mode used, `async` or `sync`. |
+| `requested_execution_mode` | string | Requested execution mode, `auto`, `async`, or `sync`. |
 | `filename` | string | Original or inferred file name. |
 | `mime_type` | string | Original or inferred MIME type. |
 | `size` | integer | Input file size in bytes. |
 | `status` | string | Status returned by Docling Serve. |
 | `processing_time` | number | Processing time returned by Docling Serve. |
-| `service` | object | Raw Docling Serve response for debugging and advanced workflows. |
+| `content_length` | integer | Original converted content length before truncation. |
+| `returned_content_length` | integer | Returned content length after truncation. |
+| `content_truncated` | boolean | Whether the plugin truncated the standard `text` output. |
+| `content` | string | Full converted content after `max_output_chars` is applied. Use this JSON field when downstream nodes need an explicit content variable. |
+| `content_preview` | string | Short preview of returned content. |
 
-Use `content` in downstream nodes:
+Use `content` from the JSON output or the standard `text` output in downstream nodes:
 
 ```text
 Please summarize the following document:
@@ -128,6 +149,22 @@ Please summarize the following document:
 ```
 
 The exact variable path depends on the Dify node name. Select it from Dify's variable picker when possible.
+
+### Async Mode
+
+The recommended default is `execution_mode=auto`. It uses the synchronous fast path for normal files and switches larger PDFs to Docling Serve async mode.
+
+When `execution_mode=async`, the plugin uses Docling Serve's async endpoints:
+
+```text
+POST /v1/convert/file/async
+GET  /v1/status/poll/{task_id}
+GET  /v1/result/{task_id}
+```
+
+Async mode is better for larger files because the plugin does not keep one synchronous HTTP request open while Docling parses the document. It polls every `poll_interval` seconds until the task completes or `request_timeout` is reached.
+
+If your gateway only exposes the synchronous conversion endpoint, set `execution_mode=sync`.
 
 ## Notes On Advanced Options
 
@@ -138,6 +175,9 @@ For a conservative CPU-only deployment, start with:
 - `pipeline=standard`
 - `output_format=markdown`
 - `force_ocr=false`
+- `do_ocr=false`
+- `include_images=false`
+- `image_export_mode=placeholder`
 - `table_mode=accurate`
 
 If an option is unsupported by your Docling Serve deployment, the API may return an error and the plugin will surface it in Dify.
@@ -156,13 +196,13 @@ Build a package into `dist/` from the parent directory:
 
 ```bash
 mkdir -p dify_plugin_docling/dist
-dify plugin package dify_plugin_docling --output_path dify_plugin_docling/dist/docling-0.1.2.difypkg
+dify plugin package dify_plugin_docling --output_path dify_plugin_docling/dist/docling-0.1.19.difypkg
 ```
 
 If plugin verification is enabled, sign the package:
 
 ```bash
-dify signature sign dist/docling-0.1.2.difypkg \
+dify signature sign dist/docling-0.1.19.difypkg \
   -p signing_keys/docling_plugin.private.pem \
   -c community
 ```
@@ -201,6 +241,28 @@ Common fixes:
 - Increase `document_timeout` if your Docling Serve deployment supports longer document processing.
 
 If the same file also times out when calling Docling Serve directly with `curl`, the issue is in the Docling service path rather than Dify.
+
+### Large Word Or PDF Files Keep Running
+
+Large documents with many images can be slow or produce very large responses, especially when images are embedded or OCR is enabled.
+
+Recommended settings for LLM workflows:
+
+- `output_format=markdown`
+- `execution_mode=auto`
+- `send_advanced_options=false`
+- `do_ocr=false`
+- `force_ocr=false`
+- `include_images=false`
+- `image_export_mode=placeholder`
+- `table_mode=fast` if table accuracy is not critical
+- `request_timeout=600`
+- `async_timeout=3600` to `7200`, depending on how long you want Dify to wait
+- `poll_interval=5`
+- `max_output_chars=200000`, or increase carefully if the next node really needs more text
+- `include_raw_response=false`
+
+If this still hangs, test the same file directly against your Docling API. If the direct API call returns quickly but Dify stays running, check whether your workflow is trying to pass a very large `text` value into the next node.
 
 ## Project Status
 

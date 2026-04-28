@@ -19,11 +19,11 @@ credentials_for_provider:
       en_US: "Docling API URL"
       zh_Hans: "Docling API 地址"
     placeholder:
-      en_US: "http://192.168.1.20:5001, http://docling-serve:5001, or https://docling.example.com"
-      zh_Hans: "http://192.168.1.20:5001、http://docling-serve:5001 或 https://docling.example.com"
+      en_US: "http://docling-serve:5001 or http://docling-serve:5001/v1/convert/file"
+      zh_Hans: "http://docling-serve:5001 或 http://docling-serve:5001/v1/convert/file"
     help:
-      en_US: "Any Docling Serve base URL reachable from Dify plugin-daemon. LAN IPs, internal DNS names, Docker service names, and HTTPS domains are all supported. Avoid localhost unless Docling runs in the same container."
-      zh_Hans: "填写 Dify plugin-daemon 能访问到的任意 Docling Serve 基础地址。支持局域网 IP、内网 DNS、Docker 服务名和 HTTPS 域名。除非 Docling 与插件在同一容器内，否则不要填 localhost。"
+      en_US: "A Docling Serve URL reachable from Dify plugin-daemon. You can enter either the service base URL or the full conversion URL. If only the base URL is provided, /v1/convert/file is used automatically."
+      zh_Hans: "填写 Dify plugin-daemon 能访问到的 Docling Serve 地址。可以填服务基础地址，也可以填完整解析地址。只填基础地址时，插件会自动使用 /v1/convert/file。"
   docling_api_key:
     type: secret-input
     required: false
@@ -40,14 +40,14 @@ credentials_for_provider:
     type: text-input
     required: false
     label:
-      en_US: "Convert Endpoint Path"
-      zh_Hans: "解析接口路径"
+      en_US: "Conversion Path"
+      zh_Hans: "解析路径"
     placeholder:
-      en_US: "/v1/convert/file or /"
-      zh_Hans: "/v1/convert/file 或 /"
+      en_US: "Optional. Leave empty for official Docling Serve paths, or use / for a root-mounted gateway."
+      zh_Hans: "可选。官方 Docling Serve 留空；如果网关把解析接口挂在根路径，可填 /。"
     help:
-      en_US: "Path appended to Docling API URL for file conversion. Official Docling Serve uses /v1/convert/file. If your proxy exposes conversion at the root URL, use /."
-      zh_Hans: "文件解析请求会拼接到 Docling API 地址后的路径。官方 Docling Serve 使用 /v1/convert/file；如果你的代理把解析接口暴露在根路径，请填 /。"
+      en_US: "Advanced. Leave empty to use /v1/convert/file or /v1/convert/source automatically. Set this only when your gateway exposes conversion at a custom path such as /, /parse, or a full URL."
+      zh_Hans: "高级选项。留空时插件会自动使用 /v1/convert/file 或 /v1/convert/source。仅当你的网关把解析接口暴露在 /、/parse 或其它完整 URL 时填写。"
 tools:
   - tools/parse_file.yaml
 extra:

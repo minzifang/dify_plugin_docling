@@ -29,8 +29,8 @@ parameters:
       en_US: "Output Format"
       zh_Hans: "输出格式"
     human_description:
-      en_US: "Choose the main content format returned in `content`. Markdown is usually best for LLM summarization and extraction."
-      zh_Hans: "选择 `content` 字段的主要内容格式。给大模型总结、抽取时通常建议使用 Markdown。"
+      en_US: "Choose the main format returned through the standard Dify `text` output. Markdown is usually best for LLM summarization and extraction."
+      zh_Hans: "选择通过 Dify 标准 `text` 输出返回的正文格式。给大模型总结、抽取时通常建议使用 Markdown。"
     llm_description: "The output format for the returned content. Valid values are markdown, text, html, json, or doctags."
     form: form
     options:
@@ -54,6 +54,31 @@ parameters:
         label:
           en_US: "DocTags"
           zh_Hans: "DocTags"
+  - name: execution_mode
+    type: select
+    required: false
+    default: auto
+    label:
+      en_US: "Execution Mode"
+      zh_Hans: "执行模式"
+    human_description:
+      en_US: "Auto uses sync for normal files and async for PDFs larger than 2 MB. Sync calls the conversion endpoint directly. Async submits a task and polls for the result."
+      zh_Hans: "自动模式普通文件走同步，超过 2MB 的 PDF 走异步。同步模式直接调用转换接口；异步模式提交任务并轮询结果。"
+    llm_description: "Use auto for most workflows. It switches larger PDFs to async."
+    form: form
+    options:
+      - value: auto
+        label:
+          en_US: "Auto"
+          zh_Hans: "自动"
+      - value: async
+        label:
+          en_US: "Async"
+          zh_Hans: "异步"
+      - value: sync
+        label:
+          en_US: "Sync"
+          zh_Hans: "同步"
   - name: max_file_size_mb
     type: number
     required: false
@@ -69,15 +94,52 @@ parameters:
   - name: do_ocr
     type: boolean
     required: false
-    default: true
+    default: false
     label:
       en_US: "OCR"
       zh_Hans: "启用 OCR"
     human_description:
-      en_US: "Ask Docling Serve to run OCR for scanned PDFs and images. This can be slower and depends on the OCR engines/models installed on the Docling service."
-      zh_Hans: "请求 Docling Serve 对扫描 PDF 和图片执行 OCR。该功能可能较慢，并依赖 Docling 服务端已安装的 OCR 引擎或模型。"
+      en_US: "Ask Docling Serve to run OCR for scanned PDFs and images. Enable only when needed because OCR can be slow on large files."
+      zh_Hans: "请求 Docling Serve 对扫描 PDF 和图片执行 OCR。大文件中 OCR 可能很慢，建议只在需要时开启。"
     llm_description: "Whether Docling Serve should run OCR. This only works when the configured service supports OCR."
     form: form
+  - name: send_advanced_options
+    type: boolean
+    required: false
+    default: false
+    label:
+      en_US: "Send Advanced Options"
+      zh_Hans: "发送高级参数"
+    human_description:
+      en_US: "Send OCR, table, image, PDF backend, and pipeline options to the API. Leave off to mimic Docling Serve UI/service defaults."
+      zh_Hans: "向 API 发送 OCR、表格、图片、PDF backend、pipeline 等高级参数。关闭时更接近 Docling Serve UI 或服务端默认行为。"
+    llm_description: "Whether to send advanced Docling conversion options. If false, only file, output format, target type, timeout, and page range are sent."
+    form: form
+  - name: request_transport
+    type: select
+    required: false
+    default: auto
+    label:
+      en_US: "Request Transport"
+      zh_Hans: "请求方式"
+    human_description:
+      en_US: "How the plugin sends the file to Docling. Auto uses Source JSON for PDFs up to 20 MB and multipart for larger PDFs to avoid base64 expansion. Most non-PDF files use multipart."
+      zh_Hans: "插件把文件发送给 Docling 的方式。自动模式下 20MB 以内的 PDF 使用 Source JSON，更大的 PDF 使用 Multipart，避免 base64 膨胀；大多数非 PDF 使用 Multipart。"
+    llm_description: "File transport to Docling Serve: auto, source_json, or multipart."
+    form: form
+    options:
+      - value: auto
+        label:
+          en_US: "Auto"
+          zh_Hans: "自动"
+      - value: multipart
+        label:
+          en_US: "Multipart"
+          zh_Hans: "Multipart"
+      - value: source_json
+        label:
+          en_US: "Source JSON"
+          zh_Hans: "Source JSON"
   - name: force_ocr
     type: boolean
     required: false
@@ -137,24 +199,32 @@ parameters:
   - name: pdf_backend
     type: select
     required: false
-    default: docling_parse
+    default: auto
     label:
       en_US: "PDF Backend"
       zh_Hans: "PDF 后端"
     human_description:
-      en_US: "PDF parsing backend requested from Docling Serve. Availability can vary by Docling Serve version and container image."
-      zh_Hans: "请求 Docling Serve 使用的 PDF 解析后端。可用选项可能随 Docling Serve 版本和镜像而变化。"
-    llm_description: "PDF backend for Docling Serve. The selected backend must be supported by the configured service."
+      en_US: "PDF parsing backend requested from Docling Serve. Auto means the plugin will not send this field and the service can choose its default."
+      zh_Hans: "请求 Docling Serve 使用的 PDF 解析后端。自动表示插件不发送该字段，由服务端选择默认值。"
+    llm_description: "PDF backend for Docling Serve. Use auto unless you know the configured service supports the selected backend."
     form: form
     options:
-      - value: docling_parse
+      - value: auto
         label:
-          en_US: "docling_parse"
-          zh_Hans: "docling_parse"
+          en_US: "Auto"
+          zh_Hans: "自动"
       - value: pypdfium2
         label:
           en_US: "pypdfium2"
           zh_Hans: "pypdfium2"
+      - value: dlparse_v1
+        label:
+          en_US: "dlparse_v1"
+          zh_Hans: "dlparse_v1"
+      - value: dlparse_v2
+        label:
+          en_US: "dlparse_v2"
+          zh_Hans: "dlparse_v2"
       - value: dlparse_v4
         label:
           en_US: "dlparse_v4"
@@ -162,7 +232,7 @@ parameters:
   - name: image_export_mode
     type: select
     required: false
-    default: embedded
+    default: placeholder
     label:
       en_US: "Image Export"
       zh_Hans: "图片导出"
@@ -187,13 +257,13 @@ parameters:
   - name: include_images
     type: boolean
     required: false
-    default: true
+    default: false
     label:
       en_US: "Include Images"
       zh_Hans: "包含图片"
     human_description:
-      en_US: "Ask Docling to include images in the converted document when the selected output format can carry them."
-      zh_Hans: "当所选输出格式支持图片时，请求 Docling 在转换结果中包含图片。"
+      en_US: "Ask Docling to include images in the converted document when the selected output format can carry them. Leave off for LLM workflows and large Word/PDF files."
+      zh_Hans: "当所选输出格式支持图片时，请求 Docling 在转换结果中包含图片。给 LLM 使用或解析较大的 Word/PDF 时建议关闭。"
     llm_description: "Whether Docling Serve should include images."
     form: form
   - name: pipeline
@@ -235,19 +305,106 @@ parameters:
       en_US: "Document Timeout"
       zh_Hans: "单文档超时"
     human_description:
-      en_US: "Docling Serve per-document timeout in seconds. Increase this for large PDFs, scanned files, OCR, or VLM pipelines."
-      zh_Hans: "Docling Serve 单文档超时时间，单位秒。大 PDF、扫描件、OCR 或 VLM 管线可适当调大。"
+      en_US: "Optional Docling Serve per-document timeout in seconds. Leave empty to use the service default, which is closest to the official UI behavior."
+      zh_Hans: "可选的 Docling Serve 单文档超时时间，单位秒。留空表示使用服务端默认值，更接近官方 UI 的行为。"
     llm_description: "Docling Serve timeout for each document in seconds."
+    form: form
+  - name: request_timeout
+    type: number
+    required: false
+    default: 600
+    label:
+      en_US: "Request Timeout"
+      zh_Hans: "请求超时"
+    human_description:
+      en_US: "HTTP timeout in seconds for synchronous file conversion requests. Large files may need several minutes; this setting should also be compatible with your Dify/plugin-daemon and Docling gateway timeouts."
+      zh_Hans: "同步文件转换请求的 HTTP 超时秒数。大文件可能需要几分钟；该值也需要与 Dify/plugin-daemon 和 Docling 网关超时配置匹配。"
+    llm_description: "HTTP timeout in seconds for sync conversion or async task submission."
+    form: form
+  - name: async_timeout
+    type: number
+    required: false
+    default: 7200
+    label:
+      en_US: "Async Timeout"
+      zh_Hans: "异步总超时"
+    human_description:
+      en_US: "Total wait budget in seconds for async polling. Complex PDFs can take many minutes. Only used when the actual execution mode is async."
+      zh_Hans: "异步轮询的总等待时间，单位秒。复杂 PDF 可能需要很多分钟。仅在实际执行模式为 async 时使用。"
+    llm_description: "Total async polling timeout in seconds."
+    form: form
+  - name: file_download_timeout
+    type: number
+    required: false
+    default: 120
+    label:
+      en_US: "File Download Timeout"
+      zh_Hans: "文件下载超时"
+    human_description:
+      en_US: "Timeout in seconds for downloading the Dify file into the plugin runtime before uploading it to Docling."
+      zh_Hans: "插件把 Dify 文件下载到运行环境中的超时时间，下载完成后才会上传给 Docling。"
+    llm_description: "Timeout in seconds for downloading the Dify file into the plugin runtime."
+    form: form
+  - name: poll_interval
+    type: number
+    required: false
+    default: 5
+    label:
+      en_US: "Poll Interval"
+      zh_Hans: "轮询间隔"
+    human_description:
+      en_US: "Seconds between async status checks. Keep 3-10 seconds for most deployments."
+      zh_Hans: "异步模式下查询任务状态的间隔秒数。大多数部署建议保持在 3-10 秒。"
+    llm_description: "Async status polling interval in seconds."
+    form: form
+  - name: max_output_chars
+    type: number
+    required: false
+    default: 200000
+    label:
+      en_US: "Max Output Characters"
+      zh_Hans: "最大输出字符数"
+    human_description:
+      en_US: "Maximum characters returned in the standard Dify `text` output. Use 0 for no truncation, but large outputs can slow down Dify workflows."
+      zh_Hans: "Dify 标准 `text` 输出最多返回的字符数。填 0 表示不截断，但超大输出可能拖慢 Dify 工作流。"
+    llm_description: "Maximum characters returned in the standard Dify text output. 0 means no truncation."
+    form: form
+  - name: include_raw_response
+    type: boolean
+    required: false
+    default: false
+    label:
+      en_US: "Raw API Response"
+      zh_Hans: "原始 API 响应"
+    human_description:
+      en_US: "Include the raw Docling API response in JSON for debugging. This can be very large and should stay off in production workflows."
+      zh_Hans: "把 Docling API 原始响应放进 JSON，便于调试。该内容可能非常大，生产工作流建议关闭。"
+    llm_description: "Whether to include raw Docling API response in JSON."
     form: form
 output_schema:
   type: object
   properties:
-    content:
-      type: string
-      description: "Converted document content in the selected output format."
     output_format:
       type: string
       description: "The selected output format."
+    execution_mode:
+      type: string
+      description: "The actual execution mode used: async or sync."
+    requested_execution_mode:
+      type: string
+      description: "The requested execution mode: auto, async, or sync."
+    request_transport:
+      type: string
+      description: "The request transport used to send the file to Docling."
+    requested_request_transport:
+      type: string
+      description: "The requested request transport: auto, source_json, or multipart."
+    request_timeout:
+      type: integer
+      description: "HTTP request timeout used by the plugin."
+    async_timeout:
+      type: integer
+      description: "Async polling timeout used by the plugin."
     filename:
       type: string
       description: "Original or inferred filename."
@@ -263,6 +420,21 @@ output_schema:
     processing_time:
       type: number
       description: "Processing time returned by Docling Serve."
+    content_length:
+      type: integer
+      description: "Original converted content length before truncation."
+    returned_content_length:
+      type: integer
+      description: "Returned content length after truncation."
+    content_truncated:
+      type: boolean
+      description: "Whether content was truncated by the plugin."
+    content:
+      type: string
+      description: "Converted document content in the selected output format. Use this field in downstream workflow nodes when selecting JSON output variables."
+    content_preview:
+      type: string
+      description: "Short preview of the returned content."
 extra:
   python:
     source: tools/parse_file.py

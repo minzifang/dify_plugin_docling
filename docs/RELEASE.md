@@ -25,14 +25,14 @@ Run from the parent directory:
 
 ```bash
 mkdir -p dify_plugin_docling/dist
-dify plugin package dify_plugin_docling --output_path dify_plugin_docling/dist/docling-0.1.2.difypkg
+dify plugin package dify_plugin_docling --output_path dify_plugin_docling/dist/docling-0.1.19.difypkg
 ```
 
 ## 4. Sign Package
 
 ```bash
 cd dify_plugin_docling
-dify signature sign dist/docling-0.1.2.difypkg \
+dify signature sign dist/docling-0.1.19.difypkg \
   -p signing_keys/docling_plugin.private.pem \
   -c community
 ```
@@ -40,16 +40,16 @@ dify signature sign dist/docling-0.1.2.difypkg \
 ## 5. Verify
 
 ```bash
-dify signature verify dist/docling-0.1.2.signed.difypkg \
+dify signature verify dist/docling-0.1.19.signed.difypkg \
   -p signing_keys/docling_plugin.public.pem
-dify plugin checksum dist/docling-0.1.2.signed.difypkg
+dify plugin checksum dist/docling-0.1.19.signed.difypkg
 ```
 
 ## 6. Publish
 
 Create a GitHub Release and upload:
 
-- `dist/docling-0.1.2.difypkg`
-- `dist/docling-0.1.2.signed.difypkg`
+- `dist/docling-0.1.19.difypkg`
+- `dist/docling-0.1.19.signed.difypkg`
 
 Do not commit generated packages or private signing keys.
